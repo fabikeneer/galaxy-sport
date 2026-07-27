@@ -1,14 +1,36 @@
 import db from '../config/db.js';
 import { convertPrices } from '../utils/exchangeCacheService.js';
 
+const ALLOWED_CATEGORIES = ['jersey', 'cap'];
+
 export const getAllProducts = async (req, res) => {
   try {
-    const [products] = await db.execute('SELECT * FROM products ORDER BY created_at DESC');
-    
-    const productsWithPrices = await Promise.all(products.map(async (product) => {
-      const convertedPrices = await convertPrices(product.precio_venta || product.price);
-      return { ...product, convertedPrices };
-    }));
+    const { category, search } = req.query;
+    const conditions = [];
+    const params = [];
+
+    if (category && ALLOWED_CATEGORIES.includes(category)) {
+      conditions.push('category = ?');
+      params.push(category);
+    }
+
+    if (typeof search === 'string' && search.trim()) {
+      conditions.push('name LIKE ?');
+      params.push(`%${search.trim()}%`);
+    }
+
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    const [products] = await db.execute(
+      `SELECT * FROM products ${whereClause} ORDER BY created_at DESC`,
+      params
+    );
+
+    const productsWithPrices = await Promise.all(
+      products.map(async (product) => {
+        const convertedPrices = await convertPrices(product.precio_venta || product.price);
+        return { ...product, convertedPrices };
+      })
+    );
 
     res.status(200).json(productsWithPrices);
   } catch (error) {

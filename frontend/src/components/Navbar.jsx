@@ -1,99 +1,180 @@
-import React, { useContext } from 'react';
-import { Link } from 'react-router-dom';
-import { ShoppingCart, User, Search, Flame } from 'lucide-react';
+import React, { useContext, useEffect, useState } from 'react';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { Menu, Search, ShoppingCart, User, X } from 'lucide-react';
 import { AppContext } from '../context/AppContext';
+
+const navItems = [
+  { label: 'Inicio', to: '/' },
+  { label: 'Camisetas', to: '/?category=jersey' },
+  { label: 'Gorras', to: '/?category=cap' },
+  { label: 'Nuevos', to: '/?view=new' },
+  { label: 'Ofertas', to: '/?view=offers', accent: true }
+];
 
 const Navbar = () => {
   const { cart, user, currency, setCurrency } = useContext(AppContext);
+  const [searchParams] = useSearchParams();
+  const location = useLocation();
+  const navigate = useNavigate();
 
-  const navLinkStyle = {
-    color: 'var(--text-silver)',
-    textTransform: 'uppercase',
-    fontSize: '0.85rem',
-    fontWeight: 600,
-    letterSpacing: '1px',
-    transition: 'color 0.2s ease',
-    textDecoration: 'none'
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '');
+
+  useEffect(() => {
+    setMenuOpen(false);
+    setSearchOpen(false);
+  }, [location.pathname, location.search]);
+
+  useEffect(() => {
+    setSearchTerm(searchParams.get('search') || '');
+  }, [searchParams]);
+
+  const isActive = (to) => {
+    if (to === '/') {
+      return location.pathname === '/' && !location.search;
+    }
+    return `${location.pathname}${location.search}` === to;
+  };
+
+  const handleSearchSubmit = (event) => {
+    event.preventDefault();
+    const term = searchTerm.trim();
+    if (!term) {
+      navigate('/');
+      return;
+    }
+    navigate(`/?search=${encodeURIComponent(term)}`);
+  };
+
+  const goToCatalog = (event) => {
+    if (location.pathname === '/') {
+      event.preventDefault();
+      document.getElementById('catalog')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      setMenuOpen(false);
+    }
   };
 
   return (
-    <nav style={{ 
-      position: 'sticky', top: 0, zIndex: 100, 
-      background: 'var(--glass-bg)',
-      backdropFilter: 'blur(12px)',
-      borderBottom: '1px solid var(--glass-border)',
-      padding: '16px 0'
-    }}>
-      <div className="container" style={{
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '20px', flexWrap: 'nowrap'
-      }}>
-        
-        {/* Logo - Left */}
-        <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '1.5rem', fontWeight: '800', color: 'var(--text-white)', textDecoration: 'none', whiteSpace: 'nowrap', flexShrink: 0 }}>
-          <div style={{
-            width: '40px', height: '40px', borderRadius: '50%', overflow: 'hidden', flexShrink: 0,
-            boxShadow: '0 0 15px rgba(229, 9, 20, 0.4)', border: '2px solid rgba(255,255,255,0.1)'
-          }}>
-            <img src="/logo-galaxy.jpeg" alt="Galaxy Sport Logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-          </div>
-          GALAXY SPORT
+    <nav className="site-nav">
+      <div className="container site-nav__inner">
+        <Link to="/" className="site-nav__brand">
+          <span className="site-nav__logo">
+            <img src="/logo-galaxy.jpeg" alt="Galaxy Sport" />
+          </span>
+          <span className="site-nav__brand-text">GALAXY SPORT</span>
         </Link>
-        
-        {/* Links - Center */}
-        <div style={{ display: 'flex', gap: '20px', alignItems: 'center', justifyContent: 'center', flex: 1, whiteSpace: 'nowrap' }}>
-          <Link to="/" style={navLinkStyle} onMouseEnter={(e)=>e.target.style.color='var(--text-white)'} onMouseLeave={(e)=>e.target.style.color='var(--text-silver)'}>Inicio</Link>
-          <Link to="/" style={navLinkStyle} onMouseEnter={(e)=>e.target.style.color='var(--text-white)'} onMouseLeave={(e)=>e.target.style.color='var(--text-silver)'}>Camisetas</Link>
-          <Link to="/" style={navLinkStyle} onMouseEnter={(e)=>e.target.style.color='var(--text-white)'} onMouseLeave={(e)=>e.target.style.color='var(--text-silver)'}>Gorras</Link>
-          <Link to="/" style={navLinkStyle} onMouseEnter={(e)=>e.target.style.color='var(--text-white)'} onMouseLeave={(e)=>e.target.style.color='var(--text-silver)'}>Nuevos</Link>
-          <Link to="/" style={{...navLinkStyle, color: 'var(--accent-red)'}}>Ofertas</Link>
+
+        <div className={`site-nav__links ${menuOpen ? 'is-open' : ''}`}>
+          {navItems.map((item) => (
+            <Link
+              key={item.to}
+              to={item.to}
+              className={`site-nav__link ${item.accent ? 'is-accent' : ''} ${isActive(item.to) ? 'is-active' : ''}`}
+            >
+              {item.label}
+            </Link>
+          ))}
+
+          <div className="site-nav__mobile-extras">
+            {user?.role === 'admin' && (
+              <Link to="/admin/dashboard" className="site-nav__admin site-nav__admin--mobile">
+                PANEL ADMIN
+              </Link>
+            )}
+            <label className="site-nav__mobile-currency">
+              <span>Moneda</span>
+              <select
+                value={currency}
+                onChange={(event) => setCurrency(event.target.value)}
+                aria-label="Moneda"
+              >
+                <option value="USDT">USDT (Binance)</option>
+                <option value="BCV">Bolívares</option>
+                <option value="EURO">Euros</option>
+              </select>
+            </label>
+            <Link to="/" className="btn btn-primary" onClick={goToCatalog}>
+              COMPRAR
+            </Link>
+          </div>
         </div>
-        
-        {/* Actions - Right */}
-        <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flexShrink: 0 }}>
+
+        <div className="site-nav__actions">
           {user?.role === 'admin' && (
-            <Link to="/admin/dashboard" style={{ color: 'var(--accent-red)', fontWeight: 'bold', fontSize: '0.9rem', textDecoration: 'none', border: '1px solid var(--accent-red)', padding: '5px 10px', borderRadius: '8px' }}>
+            <Link to="/admin/dashboard" className="site-nav__admin site-nav__admin--desktop">
               PANEL ADMIN
             </Link>
           )}
 
-          {/* Currency Selector */}
-          <select 
-            value={currency} 
-            onChange={(e) => setCurrency(e.target.value)}
-            style={{
-              background: 'rgba(0,0,0,0.5)', color: 'var(--text-white)', border: '1px solid var(--glass-border)',
-              borderRadius: '8px', padding: '6px 10px', fontSize: '0.85rem', outline: 'none', cursor: 'pointer'
-            }}
+          <select
+            className="site-nav__currency site-nav__currency--desktop"
+            value={currency}
+            onChange={(event) => setCurrency(event.target.value)}
+            aria-label="Moneda"
           >
             <option value="USDT">USDT (Binance)</option>
             <option value="BCV">Bolívares</option>
-            <option value="EURO">Euros (€)</option>
+            <option value="EURO">Euros</option>
           </select>
 
-          <Link to="/" style={{ color: 'var(--text-white)' }}><Search size={20} /></Link>
-          <Link to="/login" style={{ color: 'var(--text-white)' }}><User size={20} /></Link>
-          
-          <Link to="/cart" style={{ position: 'relative', color: 'var(--text-white)' }}>
-            <ShoppingCart size={20} /> 
-            {cart.length > 0 && (
-              <span style={{ 
-                position: 'absolute', top: '-8px', right: '-12px',
-                background: 'var(--accent-red)', color: 'white',
-                fontSize: '0.7rem', fontWeight: 'bold',
-                width: '18px', height: '18px',
-                borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center'
-              }}>
-                {cart.length}
-              </span>
-            )}
+          <button
+            type="button"
+            className="site-nav__icon-btn"
+            aria-label="Buscar"
+            onClick={() => {
+              setSearchOpen((open) => !open);
+              setMenuOpen(false);
+            }}
+          >
+            <Search size={20} />
+          </button>
+
+          <Link to="/login" className="site-nav__icon-btn" aria-label="Cuenta">
+            <User size={20} />
           </Link>
 
-          <Link to="/" className="btn btn-primary" style={{ padding: '8px 20px', fontSize: '0.9rem' }}>
+          <Link to="/cart" className="site-nav__icon-btn site-nav__cart" aria-label="Carrito">
+            <ShoppingCart size={20} />
+            {cart.length > 0 && <span className="site-nav__badge">{cart.length}</span>}
+          </Link>
+
+          <Link to="/" className="btn btn-primary site-nav__buy" onClick={goToCatalog}>
             COMPRAR
           </Link>
-        </div>
 
+          <button
+            type="button"
+            className="site-nav__menu-btn"
+            aria-label={menuOpen ? 'Cerrar menú' : 'Abrir menú'}
+            aria-expanded={menuOpen}
+            onClick={() => {
+              setMenuOpen((open) => !open);
+              setSearchOpen(false);
+            }}
+          >
+            {menuOpen ? <X size={22} /> : <Menu size={22} />}
+          </button>
+        </div>
       </div>
+
+      {searchOpen && (
+        <div className="container site-nav__search">
+          <form onSubmit={handleSearchSubmit} className="site-nav__search-form">
+            <input
+              type="search"
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              placeholder="Buscar por nombre..."
+              aria-label="Buscar productos"
+              autoFocus
+            />
+            <button type="submit" className="btn btn-primary">
+              Buscar
+            </button>
+          </form>
+        </div>
+      )}
     </nav>
   );
 };

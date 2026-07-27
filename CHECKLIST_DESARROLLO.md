@@ -40,13 +40,15 @@ Sin esto, el resto no se puede probar de punta a punta.
 
 ## Fase 1 — Navegación usable (cliente)
 
+**Estado: COMPLETADA** — ver `docs/FASE_1.md`
+
 | # | Estado | Tarea | Archivos |
 |---|--------|--------|----------|
-| 1.1 | [ ] | Filtro por categoría `jersey` / `cap` en API | `backend/controllers/productController.js` (`getAllProducts` + query `?category=`), `backend/routes/productRoutes.js` |
-| 1.2 | [ ] | Home lee `?category=` / hash y filtra | `frontend/src/pages/Home.jsx`, `frontend/src/components/Navbar.jsx` |
-| 1.3 | [ ] | Links reales: Camisetas, Gorras, Ofertas, COMPRAR | `frontend/src/components/Navbar.jsx` |
-| 1.4 | [ ] | Menú hamburguesa móvil | `frontend/src/components/Navbar.jsx`, `frontend/src/styles/theme.css` / `frontend/src/index.css` |
-| 1.5 | [ ] | Búsqueda básica (nombre) | API: `backend/controllers/productController.js`; UI: `frontend/src/components/Navbar.jsx` + barra en `frontend/src/pages/Home.jsx` |
+| 1.1 | [x] | Filtro por categoría `jersey` / `cap` en API | `backend/controllers/productController.js` (`getAllProducts` + query `?category=`) |
+| 1.2 | [x] | Home lee `?category=` / query y filtra | `frontend/src/pages/Home.jsx`, `frontend/src/components/Navbar.jsx` |
+| 1.3 | [x] | Links reales: Camisetas, Gorras, Ofertas, COMPRAR | `frontend/src/components/Navbar.jsx` |
+| 1.4 | [x] | Menú hamburguesa móvil | `frontend/src/components/Navbar.jsx`, `frontend/src/styles/theme.css` |
+| 1.5 | [x] | Búsqueda básica (nombre) | API: `backend/controllers/productController.js`; UI: `frontend/src/components/Navbar.jsx` + `frontend/src/pages/Home.jsx` |
 
 ---
 
@@ -125,7 +127,7 @@ Prioridad baja (pulido)
 ## Orden sugerido de trabajo
 
 1. Fase 0 — productos — COMPLETADA
-2. Fase 1 — navegacion + filtros + movil
+2. Fase 1 — navegacion + filtros + movil — COMPLETADA
 3. Fase 2 — checkout / envio / carrito
 4. Fase 3 — admin verificar pagos
 5. Fase 4 — mis pedidos + WhatsApp + footer

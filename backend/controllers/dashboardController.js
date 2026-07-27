@@ -1,4 +1,5 @@
 import db from '../config/db.js';
+import { sendPaymentNotification } from '../utils/notificationService.js';
 
 export const getDashboardMetrics = async (req, res) => {
   try {
@@ -125,5 +126,73 @@ export const registerManualSale = async (req, res) => {
     res.status(500).json({ error: 'Error interno del servidor al registrar la venta manual.' });
   } finally {
     connection.release();
+  }
+};
+
+export const getOrders = async (req, res) => {
+  try {
+    const { status } = req.query;
+    const validStatuses = ['pending', 'paid_to_verify', 'completed', 'cancelled'];
+
+    let query = `
+      SELECT
+        o.id,
+        o.total,
+        o.status,
+        o.shipping_name,
+        o.shipping_phone,
+        o.shipping_address,
+        o.created_at,
+        u.name AS userName,
+        u.email AS userEmail,
+        p.payment_method,
+        p.reference,
+        p.amount AS paymentAmount,
+        p.receipt_url,
+        p.created_at AS paymentDate
+      FROM orders o
+      JOIN users u ON o.user_id = u.id
+      LEFT JOIN payments p ON p.order_id = o.id
+    `;
+
+    const params = [];
+    if (status && validStatuses.includes(status)) {
+      query += ' WHERE o.status = ?';
+      params.push(status);
+    }
+
+    query += ' ORDER BY o.created_at DESC';
+
+    const [orders] = await db.query(query, params);
+    res.status(200).json(orders);
+  } catch (error) {
+    console.error('Error fetching orders:', error);
+    res.status(500).json({ error: 'Error interno del servidor al obtener las órdenes.' });
+  }
+};
+
+export const updateOrderStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    const validStatuses = ['pending', 'paid_to_verify', 'completed', 'cancelled'];
+
+    if (!status || !validStatuses.includes(status)) {
+      return res.status(400).json({ error: 'Estado inválido. Valores permitidos: pending, paid_to_verify, completed, cancelled.' });
+    }
+
+    const [result] = await db.execute(
+      'UPDATE orders SET status = ? WHERE id = ?',
+      [status, id]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Orden no encontrada.' });
+    }
+
+    res.status(200).json({ message: `Orden #${id} actualizada a "${status}" correctamente.` });
+  } catch (error) {
+    console.error('Error updating order status:', error);
+    res.status(500).json({ error: 'Error interno del servidor al actualizar el estado de la orden.' });
   }
 };

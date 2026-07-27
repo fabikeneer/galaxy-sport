@@ -19,6 +19,9 @@ export const getAllProducts = async (req, res) => {
       params.push(`%${search.trim()}%`);
     }
 
+    // Only show visible products to the store
+    conditions.push('hidden = 0');
+
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
     const [products] = await db.execute(
       `SELECT * FROM products ${whereClause} ORDER BY created_at DESC`,
@@ -152,5 +155,66 @@ export const createProduct = async (req, res) => {
   } finally {
     // Release the connection back to the pool
     connection.release();
+  }
+};
+
+export const updateProduct = async (req, res) => {
+  try {
+    const { id } = req.params;
+    let { name, description, precio_costo, precio_venta, hidden } = req.body;
+
+    const [existing] = await db.execute('SELECT id FROM products WHERE id = ?', [id]);
+    if (existing.length === 0) {
+      return res.status(404).json({ error: 'Producto no encontrado.' });
+    }
+
+    const parseNumber = (val) => {
+      if (val === undefined || val === null || val === '') return undefined;
+      const parsed = parseFloat(val.toString().replace(',', '.'));
+      return isNaN(parsed) ? undefined : parsed;
+    };
+
+    const fields = [];
+    const params = [];
+
+    if (name !== undefined) { fields.push('name = ?'); params.push(name); }
+    if (description !== undefined) { fields.push('description = ?'); params.push(description); }
+    const parsedCosto = parseNumber(precio_costo);
+    if (parsedCosto !== undefined) { fields.push('precio_costo = ?'); params.push(parsedCosto); }
+    const parsedVenta = parseNumber(precio_venta);
+    if (parsedVenta !== undefined) {
+      fields.push('precio_venta = ?'); params.push(parsedVenta);
+      fields.push('price = ?'); params.push(parsedVenta);
+    }
+    if (hidden !== undefined) { fields.push('hidden = ?'); params.push(hidden ? 1 : 0); }
+
+    if (fields.length === 0) {
+      return res.status(400).json({ error: 'No se enviaron campos para actualizar.' });
+    }
+
+    params.push(id);
+    await db.execute(`UPDATE products SET ${fields.join(', ')} WHERE id = ?`, params);
+
+    res.status(200).json({ message: 'Producto actualizado correctamente.' });
+  } catch (error) {
+    console.error('Error in updateProduct:', error);
+    res.status(500).json({ error: 'Error interno del servidor al actualizar el producto.' });
+  }
+};
+
+export const deleteProduct = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const [existing] = await db.execute('SELECT id FROM products WHERE id = ?', [id]);
+    if (existing.length === 0) {
+      return res.status(404).json({ error: 'Producto no encontrado.' });
+    }
+
+    await db.execute('DELETE FROM products WHERE id = ?', [id]);
+    res.status(200).json({ message: 'Producto eliminado correctamente.' });
+  } catch (error) {
+    console.error('Error in deleteProduct:', error);
+    res.status(500).json({ error: 'Error interno del servidor al eliminar el producto.' });
   }
 };

@@ -1,31 +1,37 @@
-export const sendPaymentNotification = async (orderData, paymentData) => {
-  try {
-    console.log('\n=======================================');
-    console.log('🔔 NUEVA NOTIFICACIÓN DE PAGO RECIBIDO 🔔');
-    console.log('=======================================');
-    console.log(`ID de Orden: ${orderData.id}`);
-    console.log(`Cliente: ${orderData.userName} (ID: ${orderData.userId})`);
-    console.log(`Referencia de Pago: ${paymentData.reference}`);
-    console.log(`Monto Declarado: $${paymentData.amount}`);
-    console.log(`URL del Comprobante: ${paymentData.receipt_url}`);
-    console.log('=======================================\n');
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 
-    // TODO: En producción, aquí se realizaría una petición HTTP (fetch/axios) 
-    // a un webhook de Telegram, Discord, o se enviaría un correo electrónico.
-    /*
-    Ejemplo con Fetch hacia un Webhook de Discord/Telegram:
-    
-    const webhookUrl = process.env.NOTIFICATION_WEBHOOK_URL;
-    await fetch(webhookUrl, {
+export const sendPaymentNotification = async (orderData, paymentData) => {
+  if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
+    console.error('[notificationService] TELEGRAM_BOT_TOKEN o TELEGRAM_CHAT_ID no configurados en .env. Notificacion omitida.');
+    return;
+  }
+
+  const text = [
+    `*Nueva orden a verificar — #${orderData.id}*`,
+    `Cliente: ${orderData.userName}`,
+    `Referencia: ${paymentData.reference || 'N/A'}`,
+    `Monto declarado: $${paymentData.amount}`,
+    `Comprobante: http://localhost:5000${paymentData.receipt_url}`
+  ].join('\n');
+
+  try {
+    const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+    const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        text: `Nuevo pago a verificar para la orden #${orderData.id} por $${paymentData.amount}`
+        chat_id: TELEGRAM_CHAT_ID,
+        text,
+        parse_mode: 'Markdown'
       })
     });
-    */
 
+    if (!response.ok) {
+      const err = await response.text();
+      console.error('[notificationService] Error al enviar mensaje Telegram:', err);
+    }
   } catch (error) {
-    console.error('Error al enviar la notificación de pago:', error);
+    console.error('[notificationService] Fallo de conexion con Telegram:', error.message);
   }
 };

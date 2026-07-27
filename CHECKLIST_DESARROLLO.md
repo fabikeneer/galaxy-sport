@@ -54,15 +54,17 @@ Sin esto, el resto no se puede probar de punta a punta.
 
 ## Fase 2 — Cerrar el ciclo de compra
 
+**Estado: COMPLETADA** — ver `docs/FASE_2.md`
+
 | # | Estado | Tarea | Archivos |
 |---|--------|--------|----------|
-| 2.1 | [ ] | Guardar envío en BD | `backend/config/database.sql` + migración (`backend/alter_db.js` o nuevo SQL): columnas en `orders` (`shipping_name`, `shipping_phone`, `shipping_address`) |
-| 2.2 | [ ] | API recibe y guarda envío | `backend/controllers/orderController.js` (`createOrder`), `frontend/src/pages/Checkout.jsx` |
-| 2.3 | [ ] | Unificar costo de envío (misma regla carrito/checkout) | `frontend/src/pages/Cart.jsx`, `frontend/src/pages/Checkout.jsx` (ideal: constante compartida o endpoint) |
-| 2.4 | [ ] | Mostrar total en Bs en checkout | `frontend/src/pages/Checkout.jsx` (+ `currency` de `frontend/src/context/AppContext.jsx`) |
-| 2.5 | [ ] | Botones “Copiar” datos Pago Móvil / wallet | `frontend/src/pages/Checkout.jsx` |
-| 2.6 | [ ] | Dorsal en detalle (si categoría jersey) | `frontend/src/pages/ProductDetail.jsx`, carrito en `frontend/src/context/AppContext.jsx`, `backend/controllers/orderController.js` (guardar `dorsal` en `order_items`) |
-| 2.7 | [ ] | Persistencia del carrito | `frontend/src/context/AppContext.jsx` (`localStorage`) |
+| 2.1 | [x] | Guardar envío en BD | `backend/config/database.sql` + `backend/scripts/add_shipping_fields.js` |
+| 2.2 | [x] | API recibe y guarda envío | `backend/controllers/orderController.js`, `frontend/src/pages/Checkout.jsx` |
+| 2.3 | [x] | Unificar costo de envío | `frontend/src/utils/constants.js`, `frontend/src/pages/Cart.jsx`, `frontend/src/pages/Checkout.jsx` |
+| 2.4 | [x] | Mostrar total en Bs en checkout | `frontend/src/pages/Checkout.jsx` |
+| 2.5 | [x] | Botones "Copiar" datos Pago Móvil / wallet | `frontend/src/pages/Checkout.jsx` |
+| 2.6 | [x] | Dorsal en detalle (si categoría jersey) | `frontend/src/pages/ProductDetail.jsx`, `frontend/src/context/AppContext.jsx`, `backend/controllers/orderController.js` |
+| 2.7 | [x] | Persistencia del carrito | `frontend/src/context/AppContext.jsx` |
 
 ---
 

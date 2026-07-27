@@ -6,27 +6,30 @@ export const createOrder = async (req, res) => {
   try {
     await connection.beginTransaction();
 
-    const { items } = req.body; // array of { variant_id, quantity }
-    const userId = req.user.id; // from authMiddleware
+    const { items, shipping_name, shipping_phone, shipping_address } = req.body;
+    const userId = req.user.id;
 
     if (!items || !Array.isArray(items) || items.length === 0) {
       await connection.rollback();
       return res.status(400).json({ error: 'La orden debe contener al menos un producto.' });
     }
 
+    if (!shipping_name || !shipping_phone || !shipping_address) {
+      await connection.rollback();
+      return res.status(400).json({ error: 'El nombre, teléfono y dirección de envío son obligatorios.' });
+    }
+
     let total = 0;
     let itemsToInsert = [];
 
-    // Verify stock and calculate total
     for (const item of items) {
-      const { variant_id, quantity } = item;
+      const { variant_id, quantity, dorsal } = item;
 
-      // 1. Get variant and its product to check price and stock
       const [variants] = await connection.execute(
         `SELECT pv.*, p.price, p.precio_costo, p.precio_venta 
          FROM product_variants pv 
          JOIN products p ON pv.product_id = p.id 
-         WHERE pv.id = ?`, 
+         WHERE pv.id = ?`,
         [variant_id]
       );
 
@@ -37,45 +40,40 @@ export const createOrder = async (req, res) => {
 
       const variant = variants[0];
 
-      // 2. Check stock
       if (variant.stock < quantity) {
         await connection.rollback();
         return res.status(400).json({ error: `Stock insuficiente para la variante ID ${variant_id}. Disponible: ${variant.stock}` });
       }
 
-      // 3. Deduct stock
       await connection.execute(
         'UPDATE product_variants SET stock = stock - ? WHERE id = ?',
         [quantity, variant_id]
       );
 
-      // 4. Add to total
       const itemPrice = parseFloat(variant.precio_venta || variant.price);
       total += itemPrice * quantity;
 
-      // 5. Save for batch insert
       itemsToInsert.push({
         product_id: variant.product_id,
-        variant_id: variant_id,
-        quantity: quantity,
+        variant_id,
+        quantity,
         precio_costo: variant.precio_costo || 0,
-        precio_venta: itemPrice
+        precio_venta: itemPrice,
+        dorsal: dorsal || null
       });
     }
 
-    // Create the order
     const [orderResult] = await connection.execute(
-      'INSERT INTO orders (user_id, total, status) VALUES (?, ?, ?)',
-      [userId, total, 'pending']
+      'INSERT INTO orders (user_id, total, status, shipping_name, shipping_phone, shipping_address) VALUES (?, ?, ?, ?, ?, ?)',
+      [userId, total, 'pending', shipping_name, shipping_phone, shipping_address]
     );
 
     const orderId = orderResult.insertId;
 
-    // Insert order items
     for (const data of itemsToInsert) {
       await connection.execute(
-        'INSERT INTO order_items (order_id, product_id, variant_id, quantity, precio_costo, precio_venta) VALUES (?, ?, ?, ?, ?, ?)',
-        [orderId, data.product_id, data.variant_id, data.quantity, data.precio_costo, data.precio_venta]
+        'INSERT INTO order_items (order_id, product_id, variant_id, quantity, precio_costo, precio_venta, dorsal) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [orderId, data.product_id, data.variant_id, data.quantity, data.precio_costo, data.precio_venta, data.dorsal]
       );
     }
 
@@ -84,7 +82,7 @@ export const createOrder = async (req, res) => {
     res.status(201).json({
       message: 'Orden creada exitosamente.',
       orderId: orderResult.insertId,
-      total: total
+      total
     });
 
   } catch (error) {

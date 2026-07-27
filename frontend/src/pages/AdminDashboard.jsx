@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { LayoutDashboard, PackagePlus, ShoppingCart, RefreshCw, AlertTriangle, Save, DollarSign, ExternalLink, Activity, DollarSign as DollarIcon, TrendingUp, Package, UploadCloud, X, Plus } from 'lucide-react';
+import { LayoutDashboard, PackagePlus, ShoppingCart, RefreshCw, AlertTriangle, Save, DollarSign, ExternalLink, Activity, DollarSign as DollarIcon, TrendingUp, Package, UploadCloud, X, Plus, ClipboardList, Eye, CheckCheck, XCircle, Pencil, Trash2 } from 'lucide-react';
 import api from '../services/api';
 
 const AdminDashboard = () => {
@@ -29,6 +29,18 @@ const AdminDashboard = () => {
   });
   const [manualSaleLoading, setManualSaleLoading] = useState(false);
 
+  // Orders Module State
+  const [orders, setOrders] = useState([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+  const [ordersFilter, setOrdersFilter] = useState('paid_to_verify');
+  const [orderActionLoading, setOrderActionLoading] = useState(null);
+  const [expandedOrder, setExpandedOrder] = useState(null);
+
+  // Product Edit State
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [productList, setProductList] = useState([]);
+  const [productListLoading, setProductListLoading] = useState(false);
+
   // Form State
   const [formData, setFormData] = useState({
     name: '',
@@ -55,6 +67,10 @@ const AdminDashboard = () => {
     } else if (activeTab === 'sales') {
       fetchSales();
       fetchProductsForSale();
+    } else if (activeTab === 'orders') {
+      fetchOrders();
+    } else if (activeTab === 'inventory') {
+      fetchProductList();
     }
   }, [activeTab]);
 
@@ -88,6 +104,65 @@ const AdminDashboard = () => {
       setProductsForSale(response.data);
     } catch (err) {
       console.error('Error fetching products for sale', err);
+    }
+  };
+
+  const fetchOrders = async (status = ordersFilter) => {
+    setOrdersLoading(true);
+    try {
+      const response = await api.get(`/dashboard/orders?status=${status}`);
+      setOrders(response.data);
+    } catch (err) {
+      console.error('Error fetching orders', err);
+    } finally {
+      setOrdersLoading(false);
+    }
+  };
+
+  const handleOrderStatus = async (orderId, newStatus) => {
+    setOrderActionLoading(orderId);
+    try {
+      await api.patch(`/dashboard/orders/${orderId}/status`, { status: newStatus });
+      setOrders(prev => prev.filter(o => o.id !== orderId));
+      setSuccessMsg(`Orden #${orderId} marcada como "${newStatus === 'completed' ? 'completada' : 'cancelada'}".`);
+      setTimeout(() => setSuccessMsg(''), 3000);
+    } catch (err) {
+      setErrorMsg(err.response?.data?.error || 'Error al actualizar el estado.');
+    } finally {
+      setOrderActionLoading(null);
+    }
+  };
+
+  const fetchProductList = async () => {
+    setProductListLoading(true);
+    try {
+      const response = await api.get('/products');
+      setProductList(response.data);
+    } catch (err) {
+      console.error('Error fetching product list', err);
+    } finally {
+      setProductListLoading(false);
+    }
+  };
+
+  const handleDeleteProduct = async (id) => {
+    if (!window.confirm('¿Seguro que quieres eliminar este producto? Esta acción no se puede deshacer.')) return;
+    try {
+      await api.delete(`/products/${id}`);
+      setProductList(prev => prev.filter(p => p.id !== id));
+      setSuccessMsg('Producto eliminado correctamente.');
+      setTimeout(() => setSuccessMsg(''), 3000);
+    } catch (err) {
+      setErrorMsg(err.response?.data?.error || 'Error al eliminar el producto.');
+    }
+  };
+
+  const handleToggleHidden = async (product) => {
+    try {
+      await api.patch(`/products/${product.id}`, { hidden: !product.hidden });
+      setProductList(prev => prev.map(p => p.id === product.id ? { ...p, hidden: !p.hidden } : p));
+    } catch (err) {
+      setErrorMsg(err.response?.data?.error || 'Error al actualizar el producto.');
     }
   };
 
@@ -293,6 +368,10 @@ const AdminDashboard = () => {
           
           <button onClick={() => setActiveTab('inventory')} style={sidebarBtnStyle('inventory')}>
             <PackagePlus size={20} /> Inventario / Cargar
+          </button>
+
+          <button onClick={() => setActiveTab('orders')} style={sidebarBtnStyle('orders')}>
+            <ClipboardList size={20} /> Verificar Pagos
           </button>
 
           <button onClick={() => setActiveTab('sales')} style={sidebarBtnStyle('sales')}>
@@ -694,6 +773,117 @@ const AdminDashboard = () => {
                     </button>
                   </form>
                 </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* --- ORDERS TAB --- */}
+        {activeTab === 'orders' && (
+          <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
+            <h1 style={{ color: 'var(--text-white)', fontSize: '2rem', marginBottom: '8px' }}>Verificar Pagos</h1>
+            <p style={{ color: 'var(--text-silver)', marginBottom: '24px' }}>Revisa los comprobantes y cambia el estado de las órdenes.</p>
+
+            {successMsg && <div style={{ background: 'rgba(34,197,94,0.1)', color: '#4ade80', padding: '14px', borderRadius: '10px', marginBottom: '16px', border: '1px solid rgba(74,222,128,0.3)' }}>{successMsg}</div>}
+            {errorMsg && <div style={{ background: 'rgba(239,68,68,0.1)', color: '#f87171', padding: '14px', borderRadius: '10px', marginBottom: '16px', border: '1px solid rgba(248,113,113,0.3)' }}>{errorMsg}</div>}
+
+            {/* Filter tabs */}
+            <div style={{ display: 'flex', gap: '10px', marginBottom: '24px', flexWrap: 'wrap' }}>
+              {[
+                { key: 'paid_to_verify', label: 'Por verificar' },
+                { key: 'pending', label: 'Pendientes' },
+                { key: 'completed', label: 'Completadas' },
+                { key: 'cancelled', label: 'Canceladas' }
+              ].map(f => (
+                <button key={f.key} onClick={() => { setOrdersFilter(f.key); fetchOrders(f.key); }}
+                  style={{
+                    padding: '8px 18px', borderRadius: '20px', fontWeight: 600, fontSize: '0.9rem', cursor: 'pointer', transition: 'all 0.2s',
+                    background: ordersFilter === f.key ? 'var(--accent-red)' : 'transparent',
+                    border: `1px solid ${ordersFilter === f.key ? 'var(--accent-red)' : 'var(--glass-border)'}`,
+                    color: ordersFilter === f.key ? 'white' : 'var(--text-silver)'
+                  }}
+                >{f.label}</button>
+              ))}
+            </div>
+
+            {ordersLoading ? (
+              <div style={{ textAlign: 'center', padding: '60px', color: 'var(--text-silver)' }}>
+                <Activity size={36} style={{ animation: 'pulse 2s infinite', color: 'var(--accent-red)' }} />
+              </div>
+            ) : orders.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '60px', color: 'var(--text-silver)', border: '1px dashed var(--glass-border)', borderRadius: '16px' }}>
+                No hay órdenes en este estado.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {orders.map(order => (
+                  <div key={order.id} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--glass-border)', borderRadius: '16px', overflow: 'hidden' }}>
+                    {/* Order header */}
+                    <div style={{ padding: '18px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+                      <div style={{ display: 'flex', gap: '20px', alignItems: 'center', flexWrap: 'wrap' }}>
+                        <span style={{ color: 'var(--text-white)', fontWeight: 700, fontSize: '1.05rem' }}>Orden #{order.id}</span>
+                        <span style={{ color: 'var(--text-silver)', fontSize: '0.9rem' }}>{order.userName} — {order.userEmail}</span>
+                        <span style={{ color: 'var(--text-silver)', fontSize: '0.85rem' }}>{new Date(order.created_at).toLocaleDateString()}</span>
+                        <span style={{
+                          padding: '3px 10px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 600,
+                          background: order.status === 'completed' ? 'rgba(34,197,94,0.1)' : order.status === 'paid_to_verify' ? 'rgba(250,204,21,0.1)' : order.status === 'cancelled' ? 'rgba(239,68,68,0.1)' : 'rgba(255,255,255,0.08)',
+                          color: order.status === 'completed' ? '#4ade80' : order.status === 'paid_to_verify' ? '#facc15' : order.status === 'cancelled' ? '#f87171' : 'var(--text-silver)'
+                        }}>{order.status}</span>
+                      </div>
+                      <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                        <span style={{ color: 'var(--accent-red)', fontWeight: 800, fontSize: '1.1rem' }}>${Number(order.total).toFixed(2)}</span>
+                        <button onClick={() => setExpandedOrder(expandedOrder === order.id ? null : order.id)}
+                          style={{ background: 'rgba(255,255,255,0.07)', border: 'none', color: 'var(--text-silver)', cursor: 'pointer', padding: '6px 12px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.85rem' }}>
+                          <Eye size={14} /> {expandedOrder === order.id ? 'Cerrar' : 'Ver detalles'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Expanded details */}
+                    {expandedOrder === order.id && (
+                      <div style={{ borderTop: '1px solid var(--glass-border)', padding: '20px 24px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                        <div>
+                          <h4 style={{ color: 'var(--text-silver)', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px', margin: '0 0 10px 0' }}>Datos de Envío</h4>
+                          <p style={{ color: 'var(--text-white)', margin: '4px 0' }}><strong>Nombre:</strong> {order.shipping_name || '—'}</p>
+                          <p style={{ color: 'var(--text-white)', margin: '4px 0' }}><strong>Teléfono:</strong> {order.shipping_phone || '—'}</p>
+                          <p style={{ color: 'var(--text-white)', margin: '4px 0' }}><strong>Dirección:</strong> {order.shipping_address || '—'}</p>
+                        </div>
+                        <div>
+                          <h4 style={{ color: 'var(--text-silver)', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px', margin: '0 0 10px 0' }}>Pago</h4>
+                          <p style={{ color: 'var(--text-white)', margin: '4px 0' }}><strong>Método:</strong> {order.payment_method || '—'}</p>
+                          <p style={{ color: 'var(--text-white)', margin: '4px 0' }}><strong>Referencia:</strong> {order.reference || '—'}</p>
+                          <p style={{ color: 'var(--text-white)', margin: '4px 0' }}><strong>Monto declarado:</strong> ${order.paymentAmount ? Number(order.paymentAmount).toFixed(2) : '—'}</p>
+                          {order.receipt_url && (
+                            <a href={`http://localhost:5000${order.receipt_url}`} target="_blank" rel="noopener noreferrer"
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '10px', color: '#60a5fa', fontSize: '0.9rem', fontWeight: 600 }}>
+                              <Eye size={14} /> Ver comprobante
+                            </a>
+                          )}
+                        </div>
+
+                        {/* Action buttons */}
+                        {(order.status === 'paid_to_verify' || order.status === 'pending') && (
+                          <div style={{ gridColumn: '1 / -1', display: 'flex', gap: '12px', paddingTop: '12px', borderTop: '1px solid var(--glass-border)' }}>
+                            <button
+                              onClick={() => handleOrderStatus(order.id, 'completed')}
+                              disabled={orderActionLoading === order.id}
+                              style={{ flex: 1, padding: '12px', background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', color: '#4ade80', borderRadius: '10px', cursor: 'pointer', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                            >
+                              <CheckCheck size={16} /> Marcar como Completada
+                            </button>
+                            <button
+                              onClick={() => handleOrderStatus(order.id, 'cancelled')}
+                              disabled={orderActionLoading === order.id}
+                              style={{ flex: 1, padding: '12px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)', color: '#f87171', borderRadius: '10px', cursor: 'pointer', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                            >
+                              <XCircle size={16} /> Cancelar Orden
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
             )}
           </div>

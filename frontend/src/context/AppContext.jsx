@@ -2,16 +2,24 @@ import React, { createContext, useState, useEffect } from 'react';
 
 export const AppContext = createContext();
 
+const loadCartFromStorage = () => {
+  try {
+    const stored = localStorage.getItem('cart');
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+};
+
 export const AppProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
     const savedUser = localStorage.getItem('user');
     return savedUser ? JSON.parse(savedUser) : null;
   });
   const [token, setToken] = useState(localStorage.getItem('token') || null);
-  const [cart, setCart] = useState([]);
+  const [cart, setCart] = useState(loadCartFromStorage);
   const [currency, setCurrency] = useState(localStorage.getItem('currency') || 'USDT');
 
-  // Load user data if token exists (simplified for now)
   useEffect(() => {
     if (token) {
       localStorage.setItem('token', token);
@@ -34,8 +42,12 @@ export const AppProvider = ({ children }) => {
     localStorage.setItem('currency', currency);
   }, [currency]);
 
-  const addToCart = (product, variant, quantity) => {
-    setCart(prev => [...prev, { product, variant, quantity }]);
+  useEffect(() => {
+    localStorage.setItem('cart', JSON.stringify(cart));
+  }, [cart]);
+
+  const addToCart = (product, variant, quantity, dorsal = null) => {
+    setCart(prev => [...prev, { product, variant, quantity, dorsal }]);
   };
 
   const removeFromCart = (index) => {
@@ -46,7 +58,10 @@ export const AppProvider = ({ children }) => {
     setCart(prev => prev.map((item, i) => i === index ? { ...item, quantity: newQuantity } : item));
   };
 
-  const clearCart = () => setCart([]);
+  const clearCart = () => {
+    setCart([]);
+    localStorage.removeItem('cart');
+  };
 
   return (
     <AppContext.Provider value={{

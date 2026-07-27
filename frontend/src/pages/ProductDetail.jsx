@@ -16,6 +16,7 @@ const ProductDetail = () => {
   // Form states
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [quantity, setQuantity] = useState(1);
+  const [dorsal, setDorsal] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   const [addedSuccess, setAddedSuccess] = useState(false);
 
@@ -81,11 +82,10 @@ const ProductDetail = () => {
   const uniqueSizes = [...new Set((product.variants || []).map(v => v.size))];
 
   const handleSizeSelect = (size) => {
-    // Find the first variant with this size
     const variant = product.variants.find(v => v.size === size);
     setSelectedVariant(variant);
-    setQuantity(1); // Reset quantity when changing size
-    setAddedSuccess(false); // Reset success state
+    setQuantity(1);
+    setAddedSuccess(false);
   };
 
   const handleQuantityChange = (delta) => {
@@ -101,14 +101,10 @@ const ProductDetail = () => {
     if (!selectedVariant) return;
 
     setIsAdding(true);
-    
-    // Simulate network delay for UI feedback
     setTimeout(() => {
-      addToCart(product, selectedVariant, quantity);
+      addToCart(product, selectedVariant, quantity, dorsal || null);
       setIsAdding(false);
       setAddedSuccess(true);
-      
-      // Reset success message after 3 seconds
       setTimeout(() => setAddedSuccess(false), 3000);
     }, 600);
   };
@@ -291,6 +287,38 @@ const ProductDetail = () => {
               </div>
             )}
           </div>
+
+          {/* Dorsal selector — solo jerseys */}
+          {product.category === 'jersey' && selectedVariant && (
+            <div style={{ marginBottom: '30px' }}>
+              <h3 style={{ fontSize: '1.1rem', color: 'var(--text-white)', margin: '0 0 12px 0', letterSpacing: '1px' }}>DORSAL / JUGADOR <span style={{ color: 'var(--text-silver)', fontSize: '0.85rem', fontWeight: 400 }}>(opcional)</span></h3>
+              <input
+                type="text"
+                value={dorsal}
+                onChange={(e) => setDorsal(e.target.value)}
+                placeholder={product.dorsales ? `Ej. ${product.dorsales.split(',')[0].trim()}` : 'Ej. Messi #10'}
+                list="dorsales-list"
+                style={{
+                  width: '100%',
+                  padding: '14px 16px',
+                  background: 'rgba(0,0,0,0.3)',
+                  border: '1px solid var(--glass-border)',
+                  borderRadius: '8px',
+                  color: 'var(--text-white)',
+                  fontSize: '1rem',
+                  outline: 'none',
+                  boxSizing: 'border-box'
+                }}
+              />
+              {product.dorsales && (
+                <datalist id="dorsales-list">
+                  {product.dorsales.split(',').map((d, i) => (
+                    <option key={i} value={d.trim()} />
+                  ))}
+                </datalist>
+              )}
+            </div>
+          )}
 
           {/* Quantity Selector */}
           {selectedVariant && (

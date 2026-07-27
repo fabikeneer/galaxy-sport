@@ -39,6 +39,9 @@ CREATE TABLE orders (
     user_id INT NOT NULL,
     total DECIMAL(10, 2) NOT NULL,
     status ENUM('pending', 'paid_to_verify', 'completed', 'cancelled') DEFAULT 'pending',
+    shipping_name VARCHAR(150),
+    shipping_phone VARCHAR(30),
+    shipping_address TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT
 );

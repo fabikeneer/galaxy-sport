@@ -2,7 +2,7 @@ import express from 'express';
 import multer from 'multer';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { getAllProducts, getProductById, createProduct } from '../controllers/productController.js';
+import { getAllProducts, getProductById, createProduct, updateProduct, deleteProduct } from '../controllers/productController.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -30,5 +30,11 @@ router.get('/:id', getProductById);
 
 // POST /api/products
 router.post('/', upload.array('images', 5), createProduct);
+
+// PATCH /api/products/:id
+router.patch('/:id', updateProduct);
+
+// DELETE /api/products/:id
+router.delete('/:id', deleteProduct);
 
 export default router;

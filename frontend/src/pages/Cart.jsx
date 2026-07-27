@@ -2,6 +2,7 @@ import React, { useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Trash2, ArrowRight, ShoppingBag } from 'lucide-react';
 import { AppContext } from '../context/AppContext';
+import { SHIPPING_COST_USD } from '../utils/constants';
 
 const Cart = () => {
   const { cart, removeFromCart, updateQuantity, currency } = useContext(AppContext);
@@ -9,7 +10,7 @@ const Cart = () => {
 
   // Calculate totals
   const subtotal = cart.reduce((total, item) => total + (parseFloat(item.product.price) * item.quantity), 0);
-  const shipping = 0; // Envío gratuito
+  const shipping = subtotal > 0 ? SHIPPING_COST_USD : 0;
   const total = subtotal + shipping;
 
   // Render converted item price

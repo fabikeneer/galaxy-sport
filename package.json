@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "start": "node backend/server.js",
-    "dev": "nodemon backend/server.js"
+    "dev": "nodemon backend/server.js",
+    "seed": "node backend/scripts/seedDatabase.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

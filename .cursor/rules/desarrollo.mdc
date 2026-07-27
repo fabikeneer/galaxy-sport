@@ -1,0 +1,27 @@
+---
+description: Reglas obligatorias de desarrollo Galaxy Sport. Revisar antes de cualquier cambio.
+alwaysApply: true
+---
+
+# Galaxy Sport — reglas de desarrollo
+
+Antes de implementar: leer `REGLAS_DESARROLLO.md` y la fase activa en `CHECKLIST_DESARROLLO.md`.
+
+## Stack permitido (no ampliar sin acuerdo)
+
+- Backend: Node.js ESM, Express 4, mysql2/promise, dotenv, jsonwebtoken, bcryptjs, multer, cors
+- Frontend: React 18, react-router-dom 6, axios, Vite 5, lucide-react
+- Estilos: CSS + variables en `frontend/src/styles/theme.css`
+- DB: MySQL 8
+
+## Obligatorio
+
+- Código (identificadores, archivos, columnas): inglés
+- Textos de usuario y errores de API: español
+- Sin emojis en código, logs ni docs técnicas
+- Sin comentarios innecesarios
+- try/catch en handlers async
+- No dependencias nuevas sin necesidad de la fase
+- Al terminar una fase: `docs/FASE_N.md` + marcar checklist
+- No commit/push salvo pedido explícito del usuario
+- No tocar fases futuras; solo la fase acordada
